@@ -1,139 +1,157 @@
-# Play Substrate
+# 06-substarte-homework
 
-## Runtime modules
+## 1.为template模块的do_something添加benchmark用例
 
-Disclaimer: these modules are for learning purpose, you should never use them in *production*.
-
-* Template
-* Proof of Existence
-* Coin flip game 
-* Data type
-* Genesis config demo
-* Offchain worker - send unsigned transaction (outdated)
-* Offchain worker - send signed transaction (outdated)
-* Weight
-* Benchmark demo
-
-A new FRAME-based Substrate node, ready for hacking.
-
-## Build
-
-Install Rust:
-
+### 1.1修改cargo.toml
+添加
 ```bash
-curl https://sh.rustup.rs -sSf | sh
+runtime-benchmarks = ["frame-benchmarking"]
 ```
 
-Initialize your Wasm Build environment:
-
+在[dependencies]中添加
 ```bash
-./scripts/init.sh
+frame-benchmarking = { default-features = false, version = '3.0.0', optional = true }
 ```
 
-Build Wasm and native code:
-
+在[feature]中添加
 ```bash
-cargo build --release
+'frame-benchmarking/std',
 ```
 
-## Run
-
-### Single Node Development Chain
-
-Purge any existing developer chain state:
-
+### 1.2创建benchmarking.rs
 ```bash
-./target/release/node-template purge-chain --dev
+//! Benchmark-demo pallet benchmarking.
+
+#![cfg(feature = "runtime-benchmarks")]
+
+use super::*;
+
+use frame_benchmarking::{benchmarks, account};
+use frame_system::RawOrigin;
+use sp_std::prelude::*;
+
+benchmarks!{
+	do_something {
+		let b in 1 .. 1000;
+		let caller = account("caller", 0, 0);
+	}: _ (RawOrigin::Signed(caller), b.into())
+	verify {
+		let value = Something::<T>::get();
+		assert_eq!(value, b.into());
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::mock::{new_test_ext, Test};
+	use frame_support::assert_ok;
+
+	#[test]
+	fn test_benchmarks() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_do_something::<Test>());
+		});
+	}
+}
+
 ```
 
-Start a development chain with:
 
+### 1.3创建weights.rs
 ```bash
-./target/release/node-template --dev
+
+use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
+use sp_std::marker::PhantomData;
+
+/// Weight functions needed for pallet_benchmark_demo.
+pub trait WeightInfo {
+	fn do_something(b: u32, ) -> Weight;
+}
+
+/// Weights for pallet_benchmark_demo using the Substrate node and recommended hardware.
+pub struct SubstrateWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+	fn do_something(b: u32, ) -> Weight {
+		(16_726_000 as Weight)
+			// Standard Error: 0
+			.saturating_add((8_000 as Weight).saturating_mul(b as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+}
+
+// For backwards compatibility and tests
+impl WeightInfo for () {
+	fn do_something(b: u32, ) -> Weight {
+		(16_726_000 as Weight)
+			// Standard Error: 0
+			.saturating_add((8_000 as Weight).saturating_mul(b as Weight))
+			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+	}
+}
+
 ```
 
-Detailed logs may be shown by running the node with the following environment variables set: `RUST_LOG=debug RUST_BACKTRACE=1 cargo run -- --dev`.
-
-### Multi-Node Local Testnet
-
-If you want to see the multi-node consensus algorithm in action locally, then you can create a local testnet with two validator nodes for Alice and Bob, who are the initial authorities of the genesis chain that have been endowed with testnet units.
-
-Optionally, give each node a name and expose them so they are listed on the Polkadot [telemetry site](https://telemetry.polkadot.io/#/Local%20Testnet).
-
-You'll need two terminal windows open.
-
-We'll start Alice's substrate node first on default TCP port 30333 with her chain database stored locally at `/tmp/alice`. The bootnode ID of her node is `QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR`, which is generated from the `--node-key` value that we specify below:
-
+## 1.4修改runtime目录
+在runtime/src.lib.rs的frame_benchmarking::Benchmark<Block>的dispatch_benchmark函数中添加
 ```bash
-cargo run -- \
-  --base-path /tmp/alice \
-  --chain=local \
-  --alice \
-  --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
-  --telemetry-url 'ws://telemetry.polkadot.io:1024 0' \
-  --validator
+add_benchmark!(params, batches, pallet_template, TemplateModule);
 ```
 
-In the second terminal, we'll start Bob's substrate node on a different TCP port of 30334, and with his chain database stored locally at `/tmp/bob`. We'll specify a value for the `--bootnodes` option that will connect his node to Alice's bootnode ID on TCP port 30333:
-
+配置config
 ```bash
-cargo run -- \
-  --base-path /tmp/bob \
-  --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
-  --chain=local \
-  --bob \
-  --port 30334 \
-  --telemetry-url 'ws://telemetry.polkadot.io:1024 0' \
-  --validator
+impl pallet_template::Config for Runtime {
+	type Event = Event;
+	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
+}
+```
+## 1.4编译和运行
+```bash
+cargo build --features runtime-benchmarks --release
+```
+运行node-template
+```bash
+./target/release/node-template benchmark  \
+--chain dev --execution=wasm \
+--wasm-execution=compiled \
+--pallet pallet_template \
+--extrinsic do_something \
+--steps 20 \
+--repeat 50
 ```
 
-Additional CLI usage options are available and may be shown by running `cargo run -- --help`.
+结果如下：
 
-### Run in Docker
+https://github.com/LeonP3ng/play-substrate/blob/master/2.%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%9C.png
 
-First, install [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
+![avatar](https://github.com/LeonP3ng/play-substrate/blob/master/2.%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%9C.png)
 
-Then run the following command to start a single node development chain.
-
+## 1.5将运行结果转为权重
 ```bash
-./scripts/docker_run.sh
+/// # <weight>
+/// - Base Weight: 26.75 us
+/// - DB Weight: 1 write
+/// # </weight>
+#[pallet::weight(T::DbWeight::get().writes(1) + 27_000_000)]
+pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResultWithPostInfo {...}
 ```
 
-This command will firstly compile your code, and then start a local development network. You can also replace the default command (`cargo build --release && ./target/release/node-template --dev --ws-external`) by appending your own. A few useful ones are as follow.
+# 2.选择node-template 生成chain spec
+
+## 2.1生成chain spec
 
 ```bash
-# Run Substrate node without re-compiling
-./scripts/docker_run.sh ./target/release/node-template --dev --ws-external
-
-# Purge the local dev chain
-./scripts/docker_run.sh ./target/release/node-template purge-chain --dev
-
-# Check whether the code is compilable
-./scripts/docker_run.sh cargo check
+./target/release/node-template build-spec --disable-default-bootnode --chain local > customSpec.json
 ```
 
-## Advanced: Generate Your Own Substrate Node Template
+文件链接
+https://github.com/LeonP3ng/play-substrate/blob/master/customSpec.json
 
-A substrate node template is always based on a certain version of Substrate. You can inspect it by
-opening [Cargo.toml](Cargo.toml) and see the template referred to a specific Substrate commit(
-`rev` field), branch, or version.
-
-You can generate your own Substrate node-template based on a particular Substrate
-version/commit by running following commands:
+## 2.2编码chain spec
 
 ```bash
-# git clone from the main Substrate repo
-git clone https://github.com/paritytech/substrate.git
-cd substrate
-
-# Switch to a particular branch or commit of the Substrate repo your node-template based on
-git checkout <branch/tag/sha1>
-
-# Run the helper script to generate a node template.
-# This script compiles Substrate and takes a while to complete. It takes a relative file path
-#   from the current dir. to output the compressed node template.
-.maintain/node-template-release.sh ../node-template.tar.gz
+ ./target/release/node-template build-spec --disable-default-bootnode --chain=customSpec.json --raw  > customSpec-raw.json
 ```
 
-Noted though you will likely get faster and more thorough support if you stick with the releases
-provided in this repository.
+文件链接
+https://github.com/LeonP3ng/play-substrate/blob/master/customSpec-raw.json
