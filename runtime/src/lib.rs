@@ -262,6 +262,7 @@ impl pallet_sudo::Config for Runtime {
 /// Configure the template pallet in pallets/template.
 impl pallet_template::Config for Runtime {
 	type Event = Event;
+	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_poe::Config for Runtime {
@@ -501,6 +502,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_benchmark_demo, BenchmarkDemoModule);
+			add_benchmark!(params, batches, pallet_template, TemplateModule);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

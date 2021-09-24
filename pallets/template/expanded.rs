@@ -969,3 +969,280 @@ impl<T: Trait> ::frame_support::dispatch::ModuleErrorMetadata for Module<T> {
         <Error<T> as ::frame_support::dispatch::ModuleErrorMetadata>::metadata()
     }
 }
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking {
+    use super::*;
+    use frame_benchmarking::{benchmarks, account};
+    use frame_system::RawOrigin;
+    use sp_std::prelude::*;
+    #[allow(non_camel_case_types)]
+    struct do_something;
+    #[allow(unused_variables)]
+    impl<T: Trait> ::frame_benchmarking::BenchmarkingSetup<T> for do_something {
+        fn components(&self) -> Vec<(::frame_benchmarking::BenchmarkParameter, u32, u32)> {
+            <[_]>::into_vec(box [(
+                ::frame_benchmarking::BenchmarkParameter::b,
+                {
+                    let b = 1;
+                    b
+                },
+                ({
+                    let b = 1000;
+                    b
+                }),
+            )])
+        }
+        fn instance(
+            &self,
+            components: &[(::frame_benchmarking::BenchmarkParameter, u32)],
+        ) -> Result<Box<dyn FnOnce() -> Result<(), &'static str>>, &'static str> {
+            let b = 1;
+            let b = components
+                .iter()
+                .find(|&c| c.0 == ::frame_benchmarking::BenchmarkParameter::b)
+                .unwrap()
+                .1;
+            ({
+                let b = || -> Result<(), &'static str> {
+                    ();
+                    Ok(())
+                };
+                b()?
+            });
+            let caller: _ = account("caller", 0, 0);
+            Ok(Box::new(move || -> Result<(), &'static str> {
+                {
+                    <Call<T> as ::frame_benchmarking::Dispatchable>::dispatch(
+                        Call::<T>::do_something(b.into()),
+                        RawOrigin::Signed(caller).into(),
+                    )?;
+                };
+                Ok(())
+            }))
+        }
+        fn verify(
+            &self,
+            components: &[(::frame_benchmarking::BenchmarkParameter, u32)],
+        ) -> Result<Box<dyn FnOnce() -> Result<(), &'static str>>, &'static str> {
+            let b = 1;
+            let b = components
+                .iter()
+                .find(|&c| c.0 == ::frame_benchmarking::BenchmarkParameter::b)
+                .unwrap()
+                .1;
+            ({
+                let b = || -> Result<(), &'static str> {
+                    ();
+                    Ok(())
+                };
+                b()?
+            });
+            let caller: _ = account("caller", 0, 0);
+            Ok(Box::new(move || -> Result<(), &'static str> {
+                {
+                    <Call<T> as ::frame_benchmarking::Dispatchable>::dispatch(
+                        Call::<T>::do_something(b.into()),
+                        RawOrigin::Signed(caller).into(),
+                    )?;
+                };
+                {
+                    let value = Something::get();
+                    {
+                        match (&value, &b.into()) {
+                            (left_val, right_val) => {
+                                if !(*left_val == *right_val) {
+                                    {
+                                        ::std::rt::begin_panic_fmt(&::core::fmt::Arguments::new_v1(
+                                            &[
+                                                "assertion failed: `(left == right)`\n  left: `",
+                                                "`,\n right: `",
+                                                "`",
+                                            ],
+                                            &match (&&*left_val, &&*right_val) {
+                                                (arg0, arg1) => [
+                                                    ::core::fmt::ArgumentV1::new(
+                                                        arg0,
+                                                        ::core::fmt::Debug::fmt,
+                                                    ),
+                                                    ::core::fmt::ArgumentV1::new(
+                                                        arg1,
+                                                        ::core::fmt::Debug::fmt,
+                                                    ),
+                                                ],
+                                            },
+                                        ))
+                                    }
+                                }
+                            }
+                        }
+                    };
+                };
+                Ok(())
+            }))
+        }
+    }
+    #[allow(non_camel_case_types)]
+    enum SelectedBenchmark {
+        do_something,
+    }
+    impl<T: Trait> ::frame_benchmarking::BenchmarkingSetup<T> for SelectedBenchmark {
+        fn components(&self) -> Vec<(::frame_benchmarking::BenchmarkParameter, u32, u32)> {
+            match self {
+                Self::do_something => <do_something as ::frame_benchmarking::BenchmarkingSetup<
+                    T,
+                >>::components(&do_something),
+            }
+        }
+        fn instance(
+            &self,
+            components: &[(::frame_benchmarking::BenchmarkParameter, u32)],
+        ) -> Result<Box<dyn FnOnce() -> Result<(), &'static str>>, &'static str> {
+            match self {
+                Self::do_something => <do_something as ::frame_benchmarking::BenchmarkingSetup<
+                    T,
+                >>::instance(&do_something, components),
+            }
+        }
+        fn verify(
+            &self,
+            components: &[(::frame_benchmarking::BenchmarkParameter, u32)],
+        ) -> Result<Box<dyn FnOnce() -> Result<(), &'static str>>, &'static str> {
+            match self {
+                Self::do_something => <do_something as ::frame_benchmarking::BenchmarkingSetup<
+                    T,
+                >>::verify(&do_something, components),
+            }
+        }
+    }
+    impl<T: Trait> ::frame_benchmarking::Benchmarking<::frame_benchmarking::BenchmarkResults>
+        for Module<T>
+    where
+        T: frame_system::Trait,
+    {
+        fn benchmarks() -> Vec<&'static [u8]> {
+            <[_]>::into_vec(box ["do_something".as_ref()])
+        }
+        fn run_benchmark(
+            extrinsic: &[u8],
+            lowest_range_values: &[u32],
+            highest_range_values: &[u32],
+            steps: &[u32],
+            repeat: u32,
+        ) -> Result<Vec<::frame_benchmarking::BenchmarkResults>, &'static str> {
+            let extrinsic = sp_std::str::from_utf8(extrinsic)
+                .map_err(|_| "`extrinsic` is not a valid utf8 string!")?;
+            let selected_benchmark = match extrinsic {
+                "do_something" => SelectedBenchmark::do_something,
+                _ => return Err("Could not find extrinsic."),
+            };
+            ::frame_benchmarking::benchmarking::commit_db();
+            ::frame_benchmarking::benchmarking::wipe_db();
+            let components =
+                <SelectedBenchmark as ::frame_benchmarking::BenchmarkingSetup<T>>::components(
+                    &selected_benchmark,
+                );
+            let mut results: Vec<::frame_benchmarking::BenchmarkResults> = Vec::new();
+            let mut prev_steps = 10;
+            for (idx, (name, low, high)) in components.iter().enumerate() {
+                let steps = steps.get(idx).cloned().unwrap_or(prev_steps);
+                prev_steps = steps;
+                if steps == 0 {
+                    continue;
+                }
+                let lowest = lowest_range_values.get(idx).cloned().unwrap_or(*low);
+                let highest = highest_range_values.get(idx).cloned().unwrap_or(*high);
+                let diff = highest - lowest;
+                let step_size = (diff / steps).max(1);
+                let num_of_steps = diff / step_size + 1;
+                for s in 0..num_of_steps {
+                    let component_value = lowest + step_size * s;
+                    let c: Vec<(::frame_benchmarking::BenchmarkParameter, u32)> = components
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, (n, _, h))| {
+                            if n == name {
+                                (*n, component_value)
+                            } else {
+                                (*n, *highest_range_values.get(idx).unwrap_or(h))
+                            }
+                        })
+                        .collect();
+                    for _ in 0..repeat {
+                        let closure_to_benchmark = < SelectedBenchmark as :: frame_benchmarking :: BenchmarkingSetup < T > > :: instance ( & selected_benchmark , & c ) ? ;
+                        if ::frame_benchmarking::Zero::is_zero(
+                            &frame_system::Module::<T>::block_number(),
+                        ) {
+                            frame_system::Module::<T>::set_block_number(1.into());
+                        }
+                        ::frame_benchmarking::benchmarking::commit_db();
+                        {
+                            let lvl = ::log::Level::Trace;
+                            if lvl <= ::log::STATIC_MAX_LEVEL && lvl <= ::log::max_level() {
+                                ::log::__private_api_log(
+                                    ::core::fmt::Arguments::new_v1(
+                                        &["Start Benchmark: ", " "],
+                                        &match (&name, &component_value) {
+                                            (arg0, arg1) => [
+                                                ::core::fmt::ArgumentV1::new(
+                                                    arg0,
+                                                    ::core::fmt::Debug::fmt,
+                                                ),
+                                                ::core::fmt::ArgumentV1::new(
+                                                    arg1,
+                                                    ::core::fmt::Debug::fmt,
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                    lvl,
+                                    &(
+                                        "benchmark",
+                                        "pallet_template::benchmarking",
+                                        "pallets/template/src/lib.rs",
+                                        115u32,
+                                    ),
+                                );
+                            }
+                        };
+                        let start_extrinsic = ::frame_benchmarking::benchmarking::current_time();
+                        closure_to_benchmark()?;
+                        let finish_extrinsic = ::frame_benchmarking::benchmarking::current_time();
+                        let elapsed_extrinsic = finish_extrinsic - start_extrinsic;
+                        {
+                            let lvl = ::log::Level::Trace;
+                            if lvl <= ::log::STATIC_MAX_LEVEL && lvl <= ::log::max_level() {
+                                ::log::__private_api_log(
+                                    ::core::fmt::Arguments::new_v1(
+                                        &["End Benchmark: ", " ns"],
+                                        &match (&elapsed_extrinsic,) {
+                                            (arg0,) => [::core::fmt::ArgumentV1::new(
+                                                arg0,
+                                                ::core::fmt::Display::fmt,
+                                            )],
+                                        },
+                                    ),
+                                    lvl,
+                                    &(
+                                        "benchmark",
+                                        "pallet_template::benchmarking",
+                                        "pallets/template/src/lib.rs",
+                                        115u32,
+                                    ),
+                                );
+                            }
+                        };
+                        let start_storage_root = ::frame_benchmarking::benchmarking::current_time();
+                        ::frame_benchmarking::storage_root();
+                        let finish_storage_root =
+                            ::frame_benchmarking::benchmarking::current_time();
+                        let elapsed_storage_root = finish_storage_root - start_storage_root;
+                        results.push((c.clone(), elapsed_extrinsic, elapsed_storage_root));
+                        ::frame_benchmarking::benchmarking::wipe_db();
+                    }
+                }
+            }
+            return Ok(results);
+        }
+    }
+}
